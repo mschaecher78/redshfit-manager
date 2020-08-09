@@ -1,0 +1,343 @@
+#!/bin/bash
+
+# Redshift Setup, a yad based bash script for Redshift
+# Copyright (C) 2020  MLS Development (Michael L. Schaecher)
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+set -e
+
+version="1.12"		# Keep version inline with redshift's version.
+
+# Default redshift-manager config file.
+default_conf="/usr/share/doc/redshift-manager/default.conf"
+
+home="/home/$(users)/.config"
+redshift_manager_dir="${home}/redshift-manager"
+
+# Since Redshift doesn't use standard bash it cannot be sourced, that
+# is why a standard bash config file.
+conf="${redshift_manager_dir}/default.conf"
+redshift_conf="${home}/redshift.conf"
+
+# User 12hr format for easier to understand.
+hours=$(echo "1,2,3,4,5,6,7,8,9,10,11,12")
+
+minutes=$(echo "00,01,02,03,04,05,06,07,08,09,10,11,12,13,14,15,16
+17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39
+40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59" |
+tr '\n' ',')
+
+north_south="north,south"
+
+east_west="east,west"
+
+am_pm="am,pm"
+
+management_type="time,location"
+
+# Source the redshift-manager config file
+if [ ! -d ${redshift_manager_dir} ] ; then
+	mkdir -p ${redshift_manager_dir}
+fi
+
+if [ ! -f ${conf} ] ; then
+	source ${default_conf}
+else
+	source ${conf}
+fi
+
+# Regardless if 'geoclue2' or 'manual' is the provider, the
+# location is still enabled.
+if [ "${management}" == "time" ] ; then
+	management="${management_type/time/^time}"
+	transition="false"
+	auto_location="false"
+elif [ "${management}" == "location" ] ; then
+	management="${management_type/location/^location}"
+fi
+
+# Determining the current 'dusk-time' that redshift is set to go to daylight
+# hours the normal bash doesn't seem to work.
+
+# Convert the 24 UTC time to 12hr am/pm.
+if [ "${daytime_hour}" -gt "12" ] ; then
+	daytime_hour=$(awk "BEGIN {print ${daytime_hour}-12}")
+	daytime_pm="${am_pm/pm/^pm}"
+else
+	daytime_pm="${am_pm/am/^am}"
+fi
+
+# Convert the 24 UTC time to 12hr am/pm.
+if [ "${nighttime_hour}" -gt "12" ] ; then
+	nighttime_hour=$(awk "BEGIN {print ${nighttime_hour}-12}")
+	nighttime_pm="${am_pm/pm/^pm}"
+else
+	nighttime_pm="${am_pm/am/^am}"
+fi
+
+# North or South
+if [ "${latitude_dir}" == "north" ] ; then
+	north_south="${north_south/north/^north}"
+elif [ "${latitude_dir}" == "south" ] ; then
+	north_south="${north_south/south/^south}"
+fi
+
+# East or West
+if [ "${longitude_dir}" == "west" ] ; then
+	east_west="${east_west/west/^west}"
+elif [ "${longitude_dir}" == "east" ] ; then
+	east_west="${east_west/east/^east}"
+fi
+
+# Start daytime hours/minutes
+a="^${daytime_hour}" && b="${daytime_hour}"
+[ "${hours%$b*}" != "$hours" ] & daytime_hour="${hours%$b*}$a${hours#*$b}"
+
+c="^${daytime_minutes}" && d="${daytime_minutes}"
+[ "${minutes%$d*}" != "$minutes" ] & daytime_minutes="${minutes%$d*}$c${minutes#*$d}"
+# End daytime hours/minutes
+
+# Start nighttime hours/minutes
+e="^${nighttime_hour}" && f="${nighttime_hour}"
+[ "${hours%$f*}" != "$hours" ] & nighttime_hour="${hours%$f*}$e${hours#*$f}"
+
+g="^${nighttime_minutes}" && h="${nighttime_minutes}"
+[ "${minutes%$h*}" != "$minutes" ] & nighttime_minutes="${minutes%$h*}$g${minutes#*$h}"
+# End nighttime hours/minutes
+
+# Show the about page.
+function redshift_manager_about () {
+
+yad --info --skip-taskbar --fixed --borders=24 --buttons-layout=center \
+	--undecorated --center --text-align=center --title="About" \
+	--text="$(cat doc/about.xsl)" \
+	--button="gtk-close:0"
+
+}
+
+export -f redshift_manager_about
+
+# YAD
+yad --form --text-align=center --borders=24 --width=720 --height=480 \
+	--fixed --window-icon=redshift --columns=2 --center --buttons-layout=edge \
+	--button=gtk-about:'bash -c "redshift_manager_about"' \
+	--button=gtk-apply:0 \
+	--separator=";" --item-separator="," --title="Redshift Manager" \
+	--field="Management:cb" ${management} \
+	--field="Temperature Intensity:lbl" "" \
+	--field="Day:scl" ${temp_day} \
+	--field="Max Brightness:lbl" "" \
+	--field="Day:scl" ${brightness_day} \
+	--field="<b>Time</b>:lbl" "" \
+	--field="hour:cbe" ${daytime_hour} \
+	--field="minutes:cbe" ${daytime_minutes} \
+	--field=":cb" ${daytime_pm} \
+	--field="Transition:lbl" "" \
+	--field="Day:scl" ${transition_day} \
+	--field="<b>Location</b>:lbl" "" \
+	--field="latitude:num" ${geoclue_latitude},0.00..90.00,0.01,2 \
+	--field=":cb" ${north_south} \
+	--field=" Location Transition:chk" ${transition} \
+	--field=" :lbl" "" \
+	--field=" :lbl" "" \
+	--field=" :lbl" "" \
+	--field="Night:scl" ${temp_night} \
+	--field=" :lbl" "" \
+	--field="Night:scl" ${brightness_night} \
+	--field=" :lbl" "" \
+	--field="hour:cbe" ${nighttime_hour} \
+	--field="minutes:cbe" ${nighttime_minutes} \
+	--field=":cb" ${nighttime_pm} \
+	--field=" :lbl" "" \
+	--field="Night:scl" ${transition_night} \
+	--field=" :lbl" "" \
+	--field="latitude:num" ${geoclue_longitude},0.00..180.00,0.01,2 \
+	--field=":cb" ${east_west} \
+	--field=" Auto Location:chk" ${auto_location} \
+	--field=" :lbl" "" | while read settings ; do
+
+# Set management to the new default.
+management="$(echo ${settings} | awk -F';' '{print $1}')"
+
+# Set both the daytime and night color temp for now.
+temp_day=$(echo ${settings} | awk -F';' '{print $3}')
+temp_night=$(echo ${settings} | awk -F';' '{print $19}')
+
+brightness_day=$(echo ${settings} | awk -F';' '{print $5}')
+brightness_night=$(echo ${settings} | awk -F';' '{print $21}')
+
+daytime_hour=$(echo ${settings} | awk -F';' '{print $7}')
+daytime_minutes=$(echo ${settings} | awk -F';' '{print $8}')
+daytime_pm=$(echo ${settings} | awk -F';' '{print $9}')
+nighttime_hour=$(echo ${settings} | awk -F';' '{print $23}')
+nighttime_minutes=$(echo ${settings} | awk -F';' '{print $24}')
+nighttime_pm=$(echo ${settings} | awk -F';' '{print $25}')
+
+# Since redshift uses the 24hr UTC do some basic math
+# to get there.
+if [ "${daytime_pm}" == "pm" ] ; then
+	daytime_hour=$(awk "BEGIN {print 12+${daytime_pm}}")
+fi
+
+if [ "${nighttime_pm}" == "pm" ] ; then
+	nighttime_hour=$(awk "BEGIN {print 12+${nighttime_hour}}")
+fi
+
+transition_day=$(echo ${settings} | awk -F';' '{print $11}')
+transition_night=$(echo ${settings} | awk -F';' '{print $27}')
+
+if [ "${transition_day}" -gt "0" ] ; then
+	transition="true" && set_transition="1"
+	conf_transition_day=$(date --date="${daytime_hour}:${daytime_minutes} \
+	${transition_day} minutes" +-%H:%M)
+else
+	set_transition="0"
+fi
+
+if [ "${transition_night}" -gt "0" ] ; then
+	transition="true" && set_transition="1"
+	conf_transition_night=$(date --date="${nighttime_hour}:${nighttime_minutes} \
+	${transition_night} minutes" +-%H:%M)
+else
+	set_transition="0"
+fi
+
+# If location is used the default of 1hr transition is used
+# and cannot be set. Only do this if management is set to
+# location.
+if [ "${management}" == "location" ] ; then
+	transition=$(echo ${settings} | awk -F';' '{print $15}')
+	dawn_time=";dawn-time=${daytime_hour}:${daytime_minutes}${conf_transition_day}"
+	dusk_time=";dusk-time=${nighttime_hour}:${nighttime_minutes}${conf_transition_night}"
+elif [ "${management}" == "time" ] ; then
+	dawn_time="dawn-time=${daytime_hour}:${daytime_minutes}${conf_transition_day}"
+	dusk_time="dusk-time=${nighttime_hour}:${nighttime_minutes}${conf_transition_night}"
+fi
+
+auto_location=$(echo ${settings} | awk -F';' '{print $31}')
+
+if [ "${auto_location}" == "TRUE" ] && [ "${management}" == "location" ] ; then
+	set_location_provider="location-provider=geoclue2"
+else
+
+	if [ "${management}" == "location" ] ; then
+		set_location_provider="location-provider=manual"
+		manual="[manual]"
+
+		# Set location regardless if location is used, this makes settings
+		# the variable easier.
+		geoclue_latitude=$(echo ${settings} | awk -F';' '{print $13}')
+		latitude_dir=$(echo ${settings} | awk -F';' '{print $14}')
+
+		if [ "${latitude_dir}" == "south" ] ; then
+			set_lat="lat=-${geoclue_latitude}"
+		else
+			set_lat="lat=${geoclue_latitude}"
+		fi
+
+		geoclue_longitude=$(echo ${settings} | awk -F';' '{print $29}')
+		longitude_dir=$(echo ${settings} | awk -F';' '{print $30}')
+
+		if [ "${longitude_dir}" == "west" ] ; then
+			set_lon="lon=-${geoclue_longitude}"
+		else
+			set_lon="lon=${geoclue_longitude}"
+		fi
+	fi
+
+fi
+
+# build the default.conf file for redshift-manager. This
+# well be used to build the new redshift.conf file.
+cat <<EOF > ${conf}
+# Use the configuration file instead of redshift's since that
+# is not a standard bash config, meaning that it cannot be
+# sourced.
+
+# How redshift is to operate between night and day. The options
+# are by clock or location. If auto location is used then the
+# location will be provided but not saved to redshift.conf file.
+management="${management}"
+
+# Default temperatures.
+temp_day="${temp_day}"
+temp_night="${temp_night}"
+
+# Set the screen brightness to use different settings for day and night
+brightness_day="${brightness_day}"
+brightness_night="${brightness_night}"
+
+# Spilt up the start daytime/nighttime time into hours and minutes.
+daytime_hour="${daytime_hour}"
+daytime_minutes="${daytime_minutes}"
+
+nighttime_hour="${nighttime_hour}"
+nighttime_minutes="${nighttime_minutes}"
+
+# Transition between temperatures when Redshift starts/stops.
+# false = disable (default).
+# true = enable.
+transition="${transition}"
+transition_day="${transition_day}"
+transition_night="${transition_night}"
+
+# Regardless if geoclue or manual set location.
+auto_location="${auto_location}"
+geoclue_latitude="${geoclue_latitude}"
+latitude_dir="${latitude_dir}"
+geoclue_longitude="${geoclue_longitude}"
+longitude_dir="${longitude_dir}"
+EOF
+
+# Either set the dawn/dusk time or location, but not
+# both
+if [ "${management}" == "time" ] ; then
+time_location="${dawn_time}
+${dusk_time}
+"
+elif [ "${management}" == "location" ] ; then
+time_location="${set_location_provider}
+
+${manual}
+${set_lat}
+${set_lon}
+"
+fi
+
+
+cat <<EOF > ${redshift_conf}
+[redshift]
+temp-day=$(awk "BEGIN {print (${temp_day}*40)+3000}")
+temp-night=$(awk "BEGIN {print (${temp_night}*40)+3000}")
+
+brightness-day=$(awk "BEGIN {print ${brightness_day}/100}")
+brightness-night=$(awk "BEGIN {print ${brightness_night}/100}")
+
+transition=${set_transition}
+
+${time_location}
+
+EOF
+
+if pgrep redshift-gtk ; then
+	kill $(pgrep redshift-gtk)
+	kill $(pgrep redshift)
+fi
+
+exec redshift-gtk
+
+done
+
+exit 0
