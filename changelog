@@ -1,3 +1,10 @@
+redshift-manager (1.12.1) ubuntu; urgency=medium
+
+  * Added debian package build process.
+  * Direct install add.
+
+ -- Michael L. Schaecher <mschaecher78@gmail.com>  Mon, 10 Aug 2020 08:50:33 -0600
+
 redshift-manager (1.12) ubuntu; urgency=low
 
   * Changed name of the main scripts stopping conflicts.

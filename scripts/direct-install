@@ -1,0 +1,70 @@
+#!/bin/bash
+
+set -e
+
+mkdir -p  /${BIN} /${DOC}/${NAME} \
+	/${APP} /${DIR} /DEBIAN
+
+# Changelog
+CHANGELOG=$(cat changelog)
+
+COMMIT=$(cat .git/COMMIT_EDITMSG)
+
+# Make sure that the commit message is not duplicated in then
+# changelog.
+if grep "* ${COMMIT}" changelog > /dev/null ; then
+	cp changelog /${DOC}/${NAME}/changelog
+else
+cat <<EOF > /${DOC}/${NAME}/changelog
+${NAME} (${VERSION}) ubuntu; urgency=medium
+
+  * ${COMMIT}
+
+ -- ${DEBFULLNAME} <${DEBEMAIL}>  $(date -R)
+
+${CHANGELOG}
+EOF
+fi
+
+cp -f /${DOC}/${NAME}/changelog changelog
+
+# Avoid using cp to copy the main script because the version needs to be set.
+if sed "21iVERSION=\"${VERSION}\"" scr/nightlight \
+> /${BIN}/nightlight ; then
+
+	chmod 0755 /${BIN}/nightlight
+	echo "installing:  /${BIN}/nightlight"
+
+	if cp -f doc/about.xsl /${DIR}/about.xsl ; then
+
+		echo "installing: /${DIR}"
+
+		if cp -f LICENSE /${DOC}/${NAME}/copyright ; then
+			echo "installing: /${DOC}/${NAME}/copyright"
+		else
+			echo "error: /${DOC}/${NAME}/copyright"
+			exit 1
+		fi
+
+		if gzip -9 -f /${DOC}/${NAME}/changelog ; then
+			echo "installing: /${DOC}/${NAME}/changelog.gz"
+		else
+			echo "error: /${DOC}/${NAME}/changelog"
+		fi
+
+		if cp -f data/redshift-manager.desktop.ini /${APP}/redshift-manager.desktop ; then
+			chmod 0755 /${APP}/redshift-manager.desktop
+			echo "installing: /${APP}/redshift-manager.desktop"
+		else
+			echo "error: /${APP}/redshift-manager.desktop"
+		fi
+
+	else
+		echo "error: /${DIR}"
+		exit 1
+	fi
+else
+	echo "error: /${BIN}/nightlight"
+	exit 1
+
+fi

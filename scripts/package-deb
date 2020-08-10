@@ -8,6 +8,8 @@ mkdir -p debian/${NAME} debian/${NAME}/${BIN} debian/${NAME}/${DOC}/${NAME} \
 # Changelog
 CHANGELOG=$(cat changelog)
 
+COMMIT=$(cat .git/COMMIT_EDITMSG)
+
 # Make sure that the commit message is not duplicated in then
 # changelog.
 if grep "* ${COMMIT}" changelog > /dev/null ; then
@@ -30,6 +32,7 @@ cp -f debian/changelog changelog
 if sed "21iVERSION=\"${VERSION}\"" scr/nightlight \
 > debian/${NAME}/${BIN}/nightlight ; then
 
+	chmod 0755 debian/${NAME}/${BIN}/nightlight
 	echo "installing:  debian/${NAME}/${BIN}/nightlight"
 
 	if cp -f doc/about.xsl debian/${NAME}/${DIR}/about.xsl ; then
@@ -50,6 +53,13 @@ if sed "21iVERSION=\"${VERSION}\"" scr/nightlight \
 			echo "error: debian/${NAME}/${DOC}/${NAME}/changelog"
 		fi
 
+		if cp -f data/redshift-manager.desktop.ini debian/${NAME}/${APP}/redshift-manager.desktop ; then
+			chmod 0755 debian/${NAME}/${APP}redshift-manager.desktop
+			echo "installing: debian/${NAME}/${APP}redshift-manager.desktop"
+		else
+			echo "error: debian/${NAME}/${APP}redshift-manager.desktop"
+		fi
+
 	else
 		echo "error: debian/${NAME}/${DIR}"
 		exit 1
@@ -67,13 +77,16 @@ Section: networking
 Priority: optional
 Maintainer: ${DEBFULLNAME} <${DEBEMAIL}>
 Build-Depends: cp, gzip, dpkg
-Homepage: https://www.github.com/mschaecher78/redshift-manager/
+Homepage: https://github.com/mschaecher78/redshfit-manager
 
 Package:${NAME}
 Architecture: all
 Depends: redshift, redshift-gtk
-Description: Manage Redshift
- backend utility easily with a yad based ui.
+Description: Manage Redshift backend utility
+ Bash script using yad to provide a simple ui to manage and change redshift settings.
+ .
+ Features include setting daytime/nighttime temperatures and brightness, set redshift
+ to use clock instead of location.
 EOF
 
 cd debian/${NAME}

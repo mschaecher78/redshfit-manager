@@ -20,6 +20,8 @@ DEB = DEBIAN
 export BIN DOC APP DIR DEB
 
 install:
+	make clean
+	scripts/direct-install
 
 package-deb:
 	make clean
