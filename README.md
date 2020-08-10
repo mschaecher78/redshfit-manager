@@ -15,14 +15,14 @@ of the features **Redshift** offers.
 
 
 ## Features
-- Set daytime/night temperature
-- Set screen brightness.
-- Set R:G:B independently.
-- Test setting before fully applying.
-- Backup pervious configuration before any changes are made.
-- Revert to previous settings.
-- Set the daytime/nighttime hours.
-- Set location manually or automatically without using google to do so.
-- Set transition on/off
-- 12hr format use for easier am/pm settings.
+[x] Set daytime/night temperature using intensity scale.
+[x] Set screen brightness.
+[ ] Set R:G:B independently.
+[ ] Test setting before fully applying.
+[ ] Backup pervious configuration before any changes are made.
+[ ] Revert to previous settings.
+[x] Set the daytime/nighttime hours.
+[x] Set geo location manually.
+[x] Set transition on/off.
+[x] 12hr format use for easier am/pm settings.
 

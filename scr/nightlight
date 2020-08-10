@@ -122,8 +122,7 @@ function redshift_manager_about () {
 
 yad --info --skip-taskbar --fixed --borders=24 --buttons-layout=center \
 	--undecorated --center --text-align=center --title="About" \
-	--text="$(cat doc/about.xsl)" \
-	--button="gtk-close:0"
+	--text="$(cat /usr/share/redshift-manager/about.xsl)" --button="gtk-close:0"
 
 }
 
