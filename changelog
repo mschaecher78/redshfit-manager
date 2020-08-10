@@ -1,0 +1,5 @@
+redshift-manager (1.12) ubuntu; urgency=low
+
+  * Changed name of the main scripts stopping conflicts.
+
+ -- Michael L. Schaecher <mschaecher78@gmail.com>  Mon, 10 Aug 2020 00:20:10 -0600

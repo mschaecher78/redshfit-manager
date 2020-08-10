@@ -1,3 +1,87 @@
 #!/bin/bash
 
+# Create the need directories that are need fot building the
+# package.
+mkdir -p debian/${NAME} debian/${NAME}/${BIN} debian/${NAME}/${DOC}/${NAME} \
+	debian/${NAME}/${APP} debian/${NAME}/${DIR} debian/${NAME}/DEBIAN
 
+# Changelog
+CHANGELOG=$(cat changelog)
+
+# Make sure that the commit message is not duplicated in then
+# changelog.
+if grep "* ${COMMIT}" changelog > /dev/null ; then
+	cp changelog debian/changelog
+else
+cat <<EOF > debian/changelog
+${NAME} (${VERSION}) ubuntu; urgency=medium
+
+  * ${COMMIT}
+
+ -- ${DEBFULLNAME} <${DEBEMAIL}>  $(date -R)
+
+${CHANGELOG}
+EOF
+fi
+
+cp -f debian/changelog changelog
+
+# Avoid using cp to copy the main script because the version needs to be set.
+if sed "21iVERSION=\"${VERSION}\"" scr/nightlight \
+> debian/${NAME}/${BIN}/nightlight ; then
+
+	echo "installing:  debian/${NAME}/${BIN}/nightlight"
+
+	if cp -f doc/about.xsl debian/${NAME}/${DIR}/about.xsl ; then
+
+		echo "installing: debian/${NAME}/${DIR}"
+
+		if cp -f LICENSE debian/${NAME}/${DOC}/${NAME}/copyright ; then
+			echo "installing: debian/${NAME}/${DOC}/${NAME}/copyright"
+		else
+			echo "error: debian/${NAME}/${DOC}/${NAME}/copyright"
+			exit 1
+		fi
+
+		if cp -f changelog debian/${NAME}/${DOC}/${NAME}/changelog ; then
+			gzip -9 -f debian/${NAME}/${DOC}/${NAME}/changelog
+			echo "installing: debian/${NAME}/${DOC}/${NAME}/changelog.gz"
+		else
+			echo "error: debian/${NAME}/${DOC}/${NAME}/changelog"
+		fi
+
+	else
+		echo "error: debian/${NAME}/${DIR}"
+		exit 1
+	fi
+else
+	echo "error: debian/${NAME}/${BIN}/nightlight"
+	exit 1
+
+fi
+
+# Generate a control file
+cat <<EOF > debian/control
+Source: ${NAME}
+Section: networking
+Priority: optional
+Maintainer: ${DEBFULLNAME} <${DEBEMAIL}>
+Build-Depends: cp, gzip, dpkg
+Homepage: https://www.github.com/mschaecher78/redshift-manager/
+
+Package:${NAME}
+Architecture: all
+Depends: redshift, redshift-gtk
+Description: Manage Redshift
+ backend utility easily with a yad based ui.
+EOF
+
+cd debian/${NAME}
+
+find . -type f ! -path './DEBIAN/*' -printf '%P\0' | xargs -r0 md5sum > DEBIAN/md5sums
+
+cd ../../
+
+if dpkg-gencontrol -p${NAME} -P"debian/${NAME}" ; then
+	dpkg-deb --build debian/${NAME} ..
+fi
