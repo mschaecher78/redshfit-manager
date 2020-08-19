@@ -1,3 +1,13 @@
+redshift-manager (1.48.12) ubuntu; urgency=medium
+
+  * New gui layout for better redshift management.
+  * Version bump
+  * Add solar elevation to manual location settings.
+  * Grad all settings from redshift.conf file instead of .config/redshift-manager/defualt.conf
+    - Having two configation files was over kill and slowed the script down.
+
+ -- Michael L. Schaecher <mschaecher78@gmail.com>  Wed, 19 Aug 2020 12:04:22 -0600
+
 redshift-manager (1.12.1) ubuntu; urgency=medium
 
   * Begin write of main script.
