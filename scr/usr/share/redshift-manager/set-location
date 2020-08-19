@@ -1,0 +1,66 @@
+#!/bin/bash
+
+# Location provider.
+loc_pro=$(cat ${redshift_conf} | grep "location-provider" | awk -F'=' '{print $2}')
+
+# Since redshift operates without a config file assume the default settings.
+if [ "${loc_pro}" == "geoclue2" ] || [ "${loc_pro}" == "" ]; then
+
+	# Redshift is set to use current location, grab it and display.
+	location=$(redshift -p | grep "Location" | awk -F': ' '{print $2}')
+
+	lat=$(echo ${location} | awk -F' ' '{print $1}')
+
+	# Latitude north/south direction.
+	if [ "$(echo ${location} | awk -F' ' '{print $2}')" == "N," ] ; then
+		lat_dir="${north_south/north/^north}"
+	else
+		lat_dir="${north_south/south/^south}"
+	fi
+
+	# Even though solar elevation is not set display the general degree for
+	# both sunrise and sunset.
+	solar_high="6,${solar_range}"
+	solar_low="6,${solar_range}"
+
+	lon=$(echo ${location} | awk -F' ' '{print $3}')
+
+	if [ "$(echo ${location} | awk -F' ' '{print $4}')" == "W" ] ; then
+		lon_dir="${east_west/west/^west}"
+	else
+		lon_dir="${east_west/west/^west}"
+	fi
+
+	# Auto location is the default, but only reflect if it present in the config file.
+	if [ "${loc_pro}" == "geoclue2" ] ; then
+		auto="true"
+	elif [ "${loc_pro}" == "" ] ; then
+		auto="false"
+	fi
+
+elif [ "${loc_pro}" == "manual" ] ; then
+
+	auto="false"
+
+	lat=$(echo ${location} | awk -F' ' '{print $1}')
+
+	if [ "$(echo ${location} | awk -F' ' '{print $2}')" == "N," ] ; then
+		lat_dir="${north_south/north/^north}"
+	else
+		lat_dir="${north_south/south/^south}"
+	fi
+
+	# Even though solar elevation is not set display the general degree for
+	# both sunrise and sunset.
+	solar_high="0,${solar_range}"
+	solar_low="0,${solar_range}"
+
+	lon=$(echo ${location} | awk -F' ' '{print $3}')
+
+	if [ "$(echo ${location} | awk -F' ' '{print $4}')" == "W" ] ; then
+		lon_dir="${east_west/west/^west}"
+	else
+		lon_dir="${east_west/west/^west}"
+	fi
+
+fi

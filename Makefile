@@ -1,8 +1,8 @@
 #!/bin/make -f
 
 LEVEL = 1
-SUBLEVEL = 12
-PATCHLEVEL = 1
+SUBLEVEL = 48
+PATCHLEVEL = 12
 
 # Set version.
 export VERSION = $(LEVEL).$(SUBLEVEL).$(PATCHLEVEL)

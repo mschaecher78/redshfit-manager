@@ -32,8 +32,14 @@ cp -f debian/changelog changelog
 if sed "21iVERSION=\"${VERSION}\"" scr/nightlight \
 > debian/${NAME}/${BIN}/nightlight ; then
 
+	cp -f scr/usr/share/redshift-manager/* debian/${NAME}/${DIR}/
+
 	chmod 0755 debian/${NAME}/${BIN}/nightlight
 	echo "installing:  debian/${NAME}/${BIN}/nightlight"
+	chmod 0755 debian/${NAME}/${DIR}/set-clock
+	echo "installing: debian/${NAME}/${DIR}/set-clock"
+	chmod 0755 debian/${NAME}/${DIR}/set-location
+	echo "installing: debian/${NAME}/${DIR}/set-location"
 
 	if cp -f doc/about.xsl debian/${NAME}/${DIR}/about.xsl ; then
 
@@ -54,7 +60,7 @@ if sed "21iVERSION=\"${VERSION}\"" scr/nightlight \
 		fi
 
 		if cp -f data/redshift-manager.desktop.ini debian/${NAME}/${APP}/redshift-manager.desktop ; then
-			chmod 0755 debian/${NAME}/${APP}redshift-manager.desktop
+			chmod 0755 debian/${NAME}/${APP}/redshift-manager.desktop
 			echo "installing: debian/${NAME}/${APP}redshift-manager.desktop"
 		else
 			echo "error: debian/${NAME}/${APP}redshift-manager.desktop"

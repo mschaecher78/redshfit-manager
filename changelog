@@ -1,5 +1,11 @@
 redshift-manager (1.12.1) ubuntu; urgency=medium
 
+  * Begin write of main script.
+
+ -- Michael L. Schaecher <mschaecher78@gmail.com>  Wed, 19 Aug 2020 11:55:10 -0600
+
+redshift-manager (1.12.1) ubuntu; urgency=medium
+
   * Added debian package build process.
   * Direct install add.
 

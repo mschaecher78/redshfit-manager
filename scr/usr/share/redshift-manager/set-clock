@@ -1,0 +1,114 @@
+#!/bin/bash
+
+# Grab the daytime and nighttime settings first.
+daytime=$(cat ${redshift_conf} | grep "dawn-time" | awk -F'=' '{print $2}')
+nighttime=$(cat ${redshift_conf} | grep "dusk-time" | awk -F'=' '{print $2}')
+
+
+if [ "${daytime}" ] && [ "${nighttime}" ]; then
+
+	# Daytime transition
+	if echo ${daytime} | grep "-" > /dev/null ; then
+		a=$(echo ${daytime} | awk -F'-' '{print $2}')
+
+		hours=$(echo ${a} | awk -F':' '{print $1}')
+
+		# Divide the transition minutes by 60 to get the general percentage.
+		minutes=$(echo ${a} | awk -F':' '{print $2}')
+		minutes=$(awk "BEGIN {print ${minutes}/60}")
+
+		trans_day=$(awk "BEGIN {print ${hours}+${minutes}}")
+	fi
+
+	if [ "${a}" ] ; then
+		b=$(echo ${daytime} | awk -F'-' '{print $1}')
+
+		hours=$(echo ${b} | awk -F':' '{print $1}')
+
+		minutes=$(echo ${b} | awk -F':' '{print $2}')
+		c=$(awk "BEGIN {print ${minutes}/60}")
+
+		c=$(awk "BEGIN {print ${hours}+${c}}")
+
+		# Figure out how much transition time there is.
+		day_transition=$(awk "BEGIN {print ${trans_day}-${c}}")
+		day_transition=$(awk "BEGIN {print ${day_transition}*60}")
+
+		day_transition="${day_transition},0..120,1,0"
+
+	else
+		hours=$(echo ${daytime} | awk -F':' '{print $1}')
+		minutes=$(echo ${daytime} | awk -F':' '{print $2}')
+
+		day_transition="0,0..120,1,0"
+	fi
+
+	# Redshift uses 24hr UTC, but most people hate that time setup.
+	if [ "${hours}" -lt "12" ] ; then
+		daytime_pm="false"
+	elif [ "${hours}" -gt "12" ] ; then
+		daytime_pm="true"
+		hours=$(awk "BEGIN {print ${hours}-12}")
+	fi
+
+	day_hours="${hours},1..12,1,0"
+	day_minutes="${minutes},0..59,1,0"
+
+	# Check for transition time for nighttime.
+	if echo ${nighttime} | grep "-" > /dev/null ; then
+		a=$(echo ${nighttime} | awk -F'-' '{print $2}')
+
+		hours=$(echo ${a} | awk -F':' '{print $1}')
+
+		minutes=$(echo ${a} | awk -F':' '{print $2}')
+		minutes=$(awk "BEGIN {print ${minutes}/60}")
+
+		trans_night=$(awk "BEGIN {print ${hours}+${minutes}}")
+	fi
+
+	if [ "${a}" ] ; then
+		b=$(echo ${nighttime} | awk -F'-' '{print $1}')
+
+		hours=$(echo ${b} | awk -F':' '{print $1}')
+
+		minutes=$(echo ${b} | awk -F':' '{print $2}')
+		c=$(awk "BEGIN {print ${minutes}/60}")
+
+		c=$(awk "BEGIN {print ${hours}+${c}}")
+
+		# Figure out how much transition time there is.
+		night_transition=$(awk "BEGIN {print ${trans_night}-${c}}")
+		night_transition=$(awk "BEGIN {print ${night_transition}*60}")
+
+		night_transition="${night_transition},0..120,1,0"
+
+	else
+		hours=$(echo ${nighttime} | awk -F':' '{print $1}')
+		minutes=$(echo ${nighttime} | awk -F':' '{print $2}')
+
+		night_transition="0,0..120,1,0"
+	fi
+
+	# Redshift uses 24hr UTC, but most people hate the time setup.
+	if [ "${hours}" -lt "12" ] ; then
+		nighttime_pm="false"
+	elif [ "${hours}" -gt "12" ] ; then
+		nighttime_pm="true"
+		hours=$(awk "BEGIN {print ${hours}-12}")
+	fi
+
+	night_hours="${hours},1..12,1,0"
+	night_minutes="${minutes},0..59,1,0"
+else
+	# Default to these of clock setting are not available.
+	day_hours="6" && day_minutes="0" && daytime_pm="false"
+	night_hours="8" && night_minutes="0" && nighttime_pm="true"
+
+	# Transition maybe set and if so default to 60 minutes.
+	if [ "${transition}" -eq "1" ] ; then
+		day_transition="60" && night_transition="60"
+	else
+		day_transition="0" && night_transition="0"
+	fi
+
+fi

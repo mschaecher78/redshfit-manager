@@ -20,22 +20,297 @@ set -e
 
 # This is used for the plug and key for notebook function of
 # YAD, which is used for adding tabs to the YAD window.
-key="${RANDOM}"
+key="$(echo "${RANDOM}")"
+
+lat_range=$(echo "0.00..90.00,0.01,2")
+lon_range=$(echo "0.00..180.00,0.01,2")
+
+solar_range=$(echo "0..90,1,0")
 
 # User 12hr format for easier to understand.
 hours=$(echo "1,2,3,4,5,6,7,8,9,10,11,12")
 
 # Minutes of the hour.
-minutes=$(echo "00,01,02,03,04,05,06,07,08,09,10,11,12,13,14,15,16
-17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39
-40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59" |
-tr '\n' ',')
+minutes=$(echo "00,01,02,03,04,05,06,07,08,09,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30
+31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59" | tr '\n' ',')
 
-north_south="north,south"
+am_pm="$(echo "am,pm")"
 
-east_west="east,west"
+# The south latitude/west longitude is represented by a '-' with
+# redshift. This is not easily understood so translate to a more
+# understandable north/south and east/west.
+north_south="$(echo "north,south")"
+east_west="$(echo "east,west")"
 
-am_pm="am,pm"
+# File and directories.
+export home="/home/$(users)"
+export redshift_conf="${home}/.config/redshift.conf"
 
-management_type="time,location"
+transition=$(cat ${redshift_conf} | grep "transition" | awk -F'=' '{print $2}')
 
+source scr/usr/share/redshift-manager/set-clock
+source scr/usr/share/redshift-manager/set-location
+
+if [ ! -f ${redshift_conf} ] ; then
+
+	# Since redshift operates without a config file assume the default settings.
+
+	temp_day="80"			# Default day color intensity.
+	temp_night="38"			# Default night color intensity.
+
+	brightness_day="100"		# Brightness during the the daytime.
+	brightness_night="80"		# The default if 100%, but at the default
+					# temperature at night the screen can be
+					# a little to bright.
+	transition="false"
+
+	auto="true"
+
+elif [ -f ${redshift_conf} ] ; then
+
+	# Somethings can be grab from the redshift.conf file, for those that
+	# cannot assume the universal default.
+
+	if cat ${redshift_conf} | grep "temp-day" > /dev/null ; then
+		temp_day=$(cat ${redshift_conf} | grep "temp-day" | awk -F'=' '{print $2}')
+		temp_day=$(awk "BEGIN {print (${temp_day}-3000)/40}")
+
+		if cat ${redshift_conf} | grep "temp-night" > /dev/null ; then
+			temp_night=$(cat ${redshift_conf} | grep "temp-night" | awk -F'=' '{print $2}')
+			temp_night=$(awk "BEGIN {print (${temp_night}-3000)/40}")
+
+		fi
+
+	fi
+
+	if cat ${redshift_conf} | grep "brightness-day" > /dev/null ; then
+		brightness_day=$(cat ${redshift_conf} | grep "brightness-day" | awk -F'=' '{print $2}')
+		brightness_day=$(awk "BEGIN {print ${brightness_day}*100}")
+
+		if cat ${redshift_conf} | grep "brightness-night" > /dev/null ; then
+			brightness_night=$(cat ${redshift_conf} | grep "brightness-night" | awk -F'=' '{print $2}')
+			brightness_night=$(awk "BEGIN {print ${brightness_night}*100}")
+
+		fi
+
+	fi
+
+	# Yad uses true/false for check boxes, but redshift uses 1/0.
+	if [ "${transition}" -eq "1" ] ; then
+		transition="true"
+	elif [ "${transition}" -eq "0" ] ; then
+		transition="false"
+	fi
+
+fi
+
+function set_clock () {
+
+# Set new daytime temperature and brightness.
+temp_day=$(awk "BEGIN {print (40*${1})+3000}")
+brightness_day=$(awk "BEGIN {print ${2}/100}")
+
+# Configure pm for daytime if needed.
+if [ "${5}" == "TRUE" ] || [ "${5}" == "true" ] ; then
+	day_hours=$(awk "BEGIN {print ${3}+12}")
+elif [ "${5}" == "FALSE" ] || [ "${5}" == "false" ] ; then
+	day_hours="${3}"
+fi
+
+# Need to add a '0' to daytime minutes if set to less then 10.
+if [ "${4}" -lt "10" ] ; then
+	day_minutes="0${4}"
+elif [ "${4}" -gt "10" ] ; then
+	day_minutes="${4}"
+fi
+
+# Figure out what to do about transition.
+if [ "${6}" -gt "0" ] ; then
+	day_transition=$(date --date="${day_hours}:${day_minutes} ${6} minutes" +-%H:%M)
+elif [ "${6}" -lt "0" ] ; then
+	day_transition=""
+fi
+
+daytime="${day_hours}:${day_minutes}${day_transition}"
+
+# Set new nighttime temperature and brightness.
+temp_night=$(awk "BEGIN {print (40*${7})+3000}")
+brightness_night=$(awk "BEGIN {print ${8}/100}")
+
+# Configure pm for daytime if needed.
+if [ "${11}" == "TRUE" ] || [ "${11}" == "true" ] ; then
+	night_hours=$(awk "BEGIN {print ${9}+12}")
+elif [ "${11}" == "FALSE" ] || [ "${11}" == "false" ] ; then
+	night_hours="${9}"
+fi
+
+# Need to add a '0' to daytime minutes if set to less then 10.
+if [ "${10}" -lt "10" ] ; then
+	night_minutes="0${10}"
+elif [ "${10}" -gt "10" ] ; then
+	night_minutes="${10}"
+fi
+
+# Figure out what to do about transition.
+if [ "${12}" -gt "0" ] ; then
+	night_transition=$(date --date="${night_hours}:${night_minutes} ${12} minutes" +-%H:%M)
+elif [ "${12}" -lt "0" ] ; then
+	night_transition=""
+fi
+
+nighttime="${night_hours}:${night_minutes}${night_transition}"
+
+if [ "${12}" -gt "0" ] && [ "${6}" -gt "0" ] ; then
+	transition="1"
+else
+	transition="0"
+fi
+
+cat <<EOF > ${redshift_conf}
+[redshift]
+temp-day=${temp_day}
+temp-night=${temp_night}
+
+brightness-day=${brightness_day}
+brightness-night=${brightness_night}
+
+transition=${transition}
+
+dawn-time=${daytime}
+dusk-time=${nighttime}
+
+EOF
+
+# Restart redshift
+if pgrep redshift-gtk ; then
+	kill $(pgrep redshift-gtk)
+	kill $(pgrep redshift)
+fi
+
+exec redshift-gtk && killall yad
+
+}
+
+function set_location () {
+
+echo "$1 $2 $3 $4 $5 $6 $7 $8 $9 ${10} ${11} ${12}"
+
+# Set new daytime temperature and brightness.
+temp_day=$(awk "BEGIN {print (40*${1})+3000}")
+brightness_day=$(awk "BEGIN {print ${2}/100}")
+
+# Set new nighttime temperature and brightness.
+temp_night=$(awk "BEGIN {print (40*${7})+3000}")
+brightness_night=$(awk "BEGIN {print ${8}/100}")
+
+# Latitude
+if [ "${4}" == "south" ] ; then
+	lat="-${3}"
+elif [ "${4}" == "north" ] ; then
+	lat="${3}"
+fi
+
+# Longitude
+if [ "${10}" == "west" ] ; then
+	lon="-${9}"
+elif [ "${10}" == "east" ] ; then
+	lon="${9}"
+fi
+
+if [ "${6}" == "TRUE" ] ; then
+	transition="1"
+elif [ "${6}" == "FALSE" ] ; then
+	transition="0"
+fi
+
+if [ "${12}" == "TRUE" ] ; then
+cat <<EOF > ${redshift_conf}
+[redshift]
+temp-day=${temp_day}
+temp-night=${temp_night}
+
+brightness-day=${brightness_day}
+brightness-night=${brightness_night}
+
+transition=${transition}
+
+location-provider=geoclue2
+
+EOF
+elif [ "${12}" == "FALSE" ] ; then
+cat <<EOF > ${redshift_conf}
+[redshift]
+temp-day=${temp_day}
+temp-night=${temp_night}
+
+brightness-day=${brightness_day}
+brightness-night=${brightness_night}
+
+transition=${transition}
+
+location-provider=manual
+
+elevation-high=${5}
+elevation-low=${11}
+
+[manual]
+lat=${lat}
+lon=${lon}
+EOF
+fi
+
+# Restart redshift
+if pgrep redshift-gtk ; then
+	kill $(pgrep redshift-gtk)
+	kill $(pgrep redshift)
+fi
+
+exec redshift-gtk && killall yad
+
+}
+
+export -f set_clock
+export -f set_location
+
+yad --plug=${key} --tabnum=1 --form --columns="2" --separator=";" --item-separator="," --borders=12 \
+	--text="<span font='12'><b>Redshift Clock Settings\n</b></span>" --text-align=center \
+	--field="Temperature Intensity:lbl" ""			--field="day:scl" ${temp_day} \
+	--field="Max Brightness:lbl" ""				--field="day:scl" ${brightness_day} \
+	--field=" :lbl" ""					--field="hours:num" ${day_hours} \
+	--field="minutes:num" ${day_minutes}			--field=" PM:chk" ${daytime_pm} \
+	--field=" :lbl" ""					--field="transition minutes:lbl" "" \
+	--field="day:num" ${day_transition}			--field=" :lbl" "" \
+	--field=" :lbl" ""					--field=" :lbl" "" \
+	--field=" :lbl" ""					--field="night:scl" ${temp_night} \
+	--field=" :lbl" ""					--field="night:scl" ${brightness_night} \
+	--field=" :lbl" ""					--field="hours:num" ${night_hours} \
+	--field="minutes:num" ${night_minutes}			--field=" PM:chk" ${nighttime_pm} \
+	--field=" :lbl" ""					--field=" :lbl" "" \
+	--field="night:num" ${night_transition}			--field=" :lbl" "" \
+	--field=" :lbl" "" \
+	--field="gtk-ok:btn" 'bash -c "set_clock %2 %4 %6 %7 %8 %11 %16 %18 %19 %20 %21 %22 %25"' \
+&
+yad --plug=${key} --tabnum=2 --form --columns="2" --separator=";" --item-separator="," --borders=12 \
+	--text="<span font='12'><b>Redshift Location Settings\n</b></span>" --text-align=center \
+	--field="Temperature Intensity:lbl" ""			--field="day:scl" ${temp_day} \
+	--field="Max Brightness:lbl" ""				--field="day:scl" ${brightness_day} \
+	--field=" :lbl" ""					--field="latitude:num" ${lat},${lat_range} \
+	--field="direction:cb" ${lat_dir}			--field=" :lbl" "" \
+	--field=" Solar:lbl" "" 				--field="day:num" ${solar_high} \
+	--field=" :lbl" ""					--field=" transition:chk" ${transition} \
+	--field=" :lbl" ""					--field=" :lbl" "" \
+	--field=" :lbl" ""					--field="night:scl" ${temp_night} \
+	--field=" :lbl" ""					--field="night:scl" ${brightness_night} \
+	--field=" :lbl" ""					--field="longitude:num" ${lon},${lon_range} \
+	--field="direction:cb" ${lon_dir}			--field=" :lbl" "" \
+	--field=" :lbl" ""					--field="night:num" ${solar_low} \
+	--field=" :lbl" ""					--field=" auto location:chk" ${auto} \
+	--field=" :lbl" "" \
+	--field="gtk-ok:btn" 'bash -c "set_location %2 %4 %6 %7 %10 %12 %15 %16 %18 %20 %21 %24 %26"' \
+&
+yad --plug=${key} --tabnum=3 --text="$(cat /usr/share/redshift-manager/about.xsl)" --text-align=center \
+	--borders=12 \
+&
+yad --notebook --key=${key} --fixed --center --window-icon=redshift --borders=6 \
+	--title="Redshift Manager" --window-icon=redshift --width=800 height=360 \
+	--tab="Clock" --tab="Location" --tab="About" --button="Exit!gtk-cancel":0

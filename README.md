@@ -26,3 +26,17 @@ of the features **Redshift** offers.
 - [x] Set transition on/off.
 - [x] 12hr format use for easier am/pm settings.
 
+## Debian package
+```
+make package-deb
+```
+
+## Direct install
+```
+make install
+```
+
+## Clean package build
+```
+make clean
+```
