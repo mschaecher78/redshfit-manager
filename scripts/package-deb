@@ -2,7 +2,7 @@
 
 # Create the need directories that are need fot building the
 # package.
-mkdir -p debian/${NAME} debian/${NAME}/${BIN} debian/${NAME}/${DOC}/${NAME} \
+mkdir -m 755 -p debian/${NAME} debian/${NAME}/${BIN} debian/${NAME}/${DOC}/${NAME} \
 	debian/${NAME}/${APP} debian/${NAME}/${DIR} debian/${NAME}/DEBIAN
 
 # Changelog
@@ -29,21 +29,17 @@ fi
 cp -f debian/changelog changelog
 
 # Avoid using cp to copy the main script because the version needs to be set.
-if sed "21iVERSION=\"${VERSION}\"" scr/nightlight \
-> debian/${NAME}/${BIN}/nightlight ; then
+if sed "21iVERSION=\"${VERSION}\"" scr/nightlight > debian/${NAME}/${BIN}/nightlight ; then
 
 	cp -f scr/usr/share/redshift-manager/* debian/${NAME}/${DIR}/
-
-	chmod 0755 debian/${NAME}/${BIN}/nightlight
 	echo "installing:  debian/${NAME}/${BIN}/nightlight"
-	chmod 0755 debian/${NAME}/${DIR}/set-clock
 	echo "installing: debian/${NAME}/${DIR}/set-clock"
-	chmod 0755 debian/${NAME}/${DIR}/set-location
 	echo "installing: debian/${NAME}/${DIR}/set-location"
 
 	if cp -f doc/about.xsl debian/${NAME}/${DIR}/about.xsl ; then
 
 		echo "installing: debian/${NAME}/${DIR}"
+		sleep 0.1
 
 		if cp -f LICENSE debian/${NAME}/${DOC}/${NAME}/copyright ; then
 			echo "installing: debian/${NAME}/${DOC}/${NAME}/copyright"
@@ -59,12 +55,12 @@ if sed "21iVERSION=\"${VERSION}\"" scr/nightlight \
 			echo "error: debian/${NAME}/${DOC}/${NAME}/changelog"
 		fi
 
-		if cp -f data/redshift-manager.desktop.ini debian/${NAME}/${APP}/redshift-manager.desktop ; then
-			chmod 0755 debian/${NAME}/${APP}/redshift-manager.desktop
-			echo "installing: debian/${NAME}/${APP}redshift-manager.desktop"
-		else
-			echo "error: debian/${NAME}/${APP}redshift-manager.desktop"
-		fi
+		#if cp -f data/redshift-manager.desktop.ini debian/${NAME}/${APP}/redshift-manager.desktop ; then
+		#	chmod 0755 debian/${NAME}/${APP}/redshift-manager.desktop
+		#	echo "installing: debian/${NAME}/${APP}redshift-manager.desktop"
+		#else
+		#	echo "error: debian/${NAME}/${APP}redshift-manager.desktop"
+		#fi
 
 	else
 		echo "error: debian/${NAME}/${DIR}"
@@ -75,6 +71,20 @@ else
 	exit 1
 
 fi
+
+cat <<EOF > debian/${NAME}/${APP}/redshift-manager.desktop
+[Desktop Entry]
+Version=1.0
+Name=Redshift Manager
+GenericName=Night Mode
+Comment=Manage redshift settings
+Categories=Settings;System
+Type=Application
+StartupNotify=true
+Exec=nightlight
+Terminal=false
+Icon=redshift
+EOF
 
 # Generate a control file
 cat <<EOF > debian/control
@@ -101,6 +111,14 @@ find . -type f ! -path './DEBIAN/*' -printf '%P\0' | xargs -r0 md5sum > DEBIAN/m
 
 cd ../../
 
+# Fix ownership and permissions
+chown -R root:root "debian/${NAME}"
+chmod -R go-w "debian/${NAME}"
+# in case we are in a restrictive umask environment like 0077
+chmod -R a+rX "debian/${NAME}"
+
 if dpkg-gencontrol -p${NAME} -P"debian/${NAME}" ; then
 	dpkg-deb --build debian/${NAME} ..
 fi
+
+exit

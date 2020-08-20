@@ -34,13 +34,13 @@ if [ "${daytime}" ] && [ "${nighttime}" ]; then
 		day_transition=$(awk "BEGIN {print ${trans_day}-${c}}")
 		day_transition=$(awk "BEGIN {print ${day_transition}*60}")
 
-		day_transition="${day_transition},0..120,1,0"
+		day_transition="${day_transition},${transition_range}"
 
 	else
 		hours=$(echo ${daytime} | awk -F':' '{print $1}')
 		minutes=$(echo ${daytime} | awk -F':' '{print $2}')
 
-		day_transition="0,0..120,1,0"
+		day_transition="0,${transition_range}"
 	fi
 
 	# Redshift uses 24hr UTC, but most people hate that time setup.
@@ -51,8 +51,8 @@ if [ "${daytime}" ] && [ "${nighttime}" ]; then
 		hours=$(awk "BEGIN {print ${hours}-12}")
 	fi
 
-	day_hours="${hours},1..12,1,0"
-	day_minutes="${minutes},0..59,1,0"
+	day_hours="${hours},${hour_range}"
+	day_minutes="${minutes},${minute_range}"
 
 	# Check for transition time for nighttime.
 	if echo ${nighttime} | grep "-" > /dev/null ; then
@@ -80,13 +80,13 @@ if [ "${daytime}" ] && [ "${nighttime}" ]; then
 		night_transition=$(awk "BEGIN {print ${trans_night}-${c}}")
 		night_transition=$(awk "BEGIN {print ${night_transition}*60}")
 
-		night_transition="${night_transition},0..120,1,0"
+		night_transition="${night_transition},${transition_range}"
 
 	else
 		hours=$(echo ${nighttime} | awk -F':' '{print $1}')
 		minutes=$(echo ${nighttime} | awk -F':' '{print $2}')
 
-		night_transition="0,0..120,1,0"
+		night_transition="0,${transition_range}"
 	fi
 
 	# Redshift uses 24hr UTC, but most people hate the time setup.
@@ -97,8 +97,8 @@ if [ "${daytime}" ] && [ "${nighttime}" ]; then
 		hours=$(awk "BEGIN {print ${hours}-12}")
 	fi
 
-	night_hours="${hours},1..12,1,0"
-	night_minutes="${minutes},0..59,1,0"
+	night_hours="${hours},${hour_range}"
+	night_minutes="${minutes},${minute_range}"
 else
 	# Default to these of clock setting are not available.
 	day_hours="6" && day_minutes="0" && daytime_pm="false"

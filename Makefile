@@ -1,8 +1,8 @@
 #!/bin/make -f
 
-LEVEL = 1
-SUBLEVEL = 48
-PATCHLEVEL = 12
+LEVEL = 2
+SUBLEVEL = 0
+PATCHLEVEL = 8
 
 # Set version.
 export VERSION = $(LEVEL).$(SUBLEVEL).$(PATCHLEVEL)
@@ -25,7 +25,7 @@ install:
 
 package-deb:
 	make clean
-	scripts/package-deb
+	fakeroot scripts/package-deb
 
 clean:
 	rm -Rf debian
