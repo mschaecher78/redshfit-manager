@@ -1,3 +1,10 @@
+redshift-manager (2.0.8) ubuntu; urgency=medium
+
+  * Run package build under fakeroot, fix premissions problems.
+  * Add language support to desktop entry.
+
+ -- Michael L. Schaecher <mschaecher78@gmail.com>  Thu, 20 Aug 2020 10:02:50 -0600
+
 redshift-manager (1.48.12) ubuntu; urgency=medium
 
   * Version bump.

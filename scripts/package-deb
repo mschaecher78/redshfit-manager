@@ -31,8 +31,10 @@ cp -f debian/changelog changelog
 # Avoid using cp to copy the main script because the version needs to be set.
 if sed "21iVERSION=\"${VERSION}\"" scr/nightlight > debian/${NAME}/${BIN}/nightlight ; then
 
-	cp -f scr/usr/share/redshift-manager/* debian/${NAME}/${DIR}/
+	chmod a+x debian/${NAME}/${BIN}/nightlight
 	echo "installing:  debian/${NAME}/${BIN}/nightlight"
+
+	cp -f scr/usr/share/redshift-manager/* debian/${NAME}/${DIR}/
 	echo "installing: debian/${NAME}/${DIR}/set-clock"
 	echo "installing: debian/${NAME}/${DIR}/set-location"
 
@@ -55,12 +57,11 @@ if sed "21iVERSION=\"${VERSION}\"" scr/nightlight > debian/${NAME}/${BIN}/nightl
 			echo "error: debian/${NAME}/${DOC}/${NAME}/changelog"
 		fi
 
-		#if cp -f data/redshift-manager.desktop.ini debian/${NAME}/${APP}/redshift-manager.desktop ; then
-		#	chmod 0755 debian/${NAME}/${APP}/redshift-manager.desktop
-		#	echo "installing: debian/${NAME}/${APP}redshift-manager.desktop"
-		#else
-		#	echo "error: debian/${NAME}/${APP}redshift-manager.desktop"
-		#fi
+		if cp -f data/redshift-manager.desktop.ini debian/${NAME}/${APP}/redshift-manager.desktop ; then
+			echo "installing: debian/${NAME}/${APP}redshift-manager.desktop"
+		else
+			echo "error: debian/${NAME}/${APP}redshift-manager.desktop"
+		fi
 
 	else
 		echo "error: debian/${NAME}/${DIR}"
@@ -71,20 +72,6 @@ else
 	exit 1
 
 fi
-
-cat <<EOF > debian/${NAME}/${APP}/redshift-manager.desktop
-[Desktop Entry]
-Version=1.0
-Name=Redshift Manager
-GenericName=Night Mode
-Comment=Manage redshift settings
-Categories=Settings;System
-Type=Application
-StartupNotify=true
-Exec=nightlight
-Terminal=false
-Icon=redshift
-EOF
 
 # Generate a control file
 cat <<EOF > debian/control
