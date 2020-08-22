@@ -92,11 +92,13 @@ Description: Manage Redshift backend utility
  to use clock instead of location.
 EOF
 
+tree=$(pwd)
+
 cd debian/${NAME}
 
 find . -type f ! -path './DEBIAN/*' -printf '%P\0' | xargs -r0 md5sum > DEBIAN/md5sums
 
-cd ../../
+cd ${tree}
 
 # Fix ownership and permissions
 chown -R root:root "debian/${NAME}"

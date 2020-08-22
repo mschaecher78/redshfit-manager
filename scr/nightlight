@@ -49,6 +49,9 @@ transition=$(cat ${redshift_conf} | grep "transition" | awk -F'=' '{print $2}')
 source /usr/share/redshift-manager/set-clock
 source /usr/share/redshift-manager/set-location
 
+# Backup current configuration setup.
+cp -f ${redshift_conf} ${redshift_conf}.bak
+
 if [ ! -f ${redshift_conf} ] ; then
 
 	# Since redshift operates without a config file assume the default settings.
@@ -309,4 +312,4 @@ yad --plug=${key} --tabnum=3 --text="$(cat /usr/share/redshift-manager/about.xsl
 &
 yad --notebook --key=${key} --fixed --center --window-icon=redshift --borders=6 \
 	--title="Redshift Manager" --window-icon=redshift --width=800 height=360 \
-	--tab="Clock" --tab="Location" --tab="About" --button="Exit!gtk-cancel":0
+	--tab="Clock" --tab="Location" --tab="About" --button="Exit!gtk-cancel":1
